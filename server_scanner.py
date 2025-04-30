@@ -133,7 +133,7 @@ def main():
                 server = JavaServer.lookup(address=MC_SERVER_IP, timeout=10)
                 status = server.status()
                 current_time_utc = datetime.now(timezone.utc)
-                current_time_local = current_time_utc.astimezone(ZoneInfo("America/New_York"))
+                current_time_local = current_time_utc.astimezone()
 
                 # get sampled list of players currently online then map them to a player object inside a set.
                 current_sample = status.players.sample or []
