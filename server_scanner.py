@@ -179,7 +179,7 @@ def main():
                 last_players_online = current_players.copy()
 
             except Exception as e:
-                print(f"[{datetime.now(ZoneInfo("America/New_York")).isoformat()}] Error: {e}")
+                print(f"[{datetime.now(ZoneInfo('America/New_York')).isoformat()}] Error: {e}")
             time.sleep(SLEEP_TIME)
 
     except KeyboardInterrupt:
