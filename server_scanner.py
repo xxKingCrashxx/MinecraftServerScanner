@@ -158,7 +158,7 @@ def main():
                     if player.name not in player_map:
                         player_map[player.name] = player
                         player.join_time = current_time_utc
-                        print(f"[{current_time_utc}] {player.name} joined.")
+                        print(f"[{current_time_local.isoformat()}] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
                             
 
