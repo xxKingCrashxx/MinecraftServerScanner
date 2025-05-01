@@ -127,6 +127,7 @@ def main():
     player_map = {}
 
     try:
+        print(f"[{datetime.now(timezone.utc).astimezone().isoformat()}][Server Scanner] Scanning Minecraft Server on: {MC_SERVER_IP}")
         while True:
             try:
                 #Get server object and status object to query the server.
@@ -145,7 +146,7 @@ def main():
                 left_now = last_players_online - current_players
 
                 if joined_now or left_now:
-                    print(f"[{current_time_local.isoformat()}] Server IP: {server.address}\tPlayers Online: {status.players.online}")
+                    print(f"[{current_time_local.isoformat()}][Server Scanner] Server IP: {server.address}\tPlayers Online: {status.players.online}")
                     print("Players:", [p.name for p in current_players])
 
                     #log player list and count to server_session:
@@ -158,7 +159,7 @@ def main():
                     if player.name not in player_map:
                         player_map[player.name] = player
                         player.join_time = current_time_utc
-                        print(f"[{current_time_local.isoformat()}] {player.name} joined.")
+                        print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
                             
 
@@ -167,13 +168,13 @@ def main():
 
                     leaving_player = player_map.get(player.name)
                     if leaving_player == None:
-                        print(f"[{current_time_local.isoformat()}] [WARNING] player: {player.name} was not in the player_map")
+                        print(f"[{current_time_local.isoformat()}][Server Scanner][WARNING] player: {player.name} was not in the player_map")
                     else:
 
                         leaving_player.left_time = current_time_utc
 
                         log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time_utc)
-                        print(f"[{current_time_local.isoformat()}] {leaving_player.name} left the server.")
+                        print(f"[{current_time_local.isoformat()}][Server Scanner] {leaving_player.name} left the server.")
                         player_map.pop(player.name, None)
 
                 last_players_online = current_players.copy()
