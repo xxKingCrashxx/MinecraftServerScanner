@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from pymongo import MongoClient
+from zoneinfo import ZoneInfo
 
 class Player:
     def __init__(self, name, uuid, join_time=None, left_time=None):
@@ -131,7 +132,8 @@ def main():
                 #Get server object and status object to query the server.
                 server = JavaServer.lookup(address=MC_SERVER_IP, timeout=10)
                 status = server.status()
-                current_time = datetime.now(timezone.utc)
+                current_time_utc = datetime.now(timezone.utc)
+                current_time_local = current_time_utc.astimezone()
 
                 # get sampled list of players currently online then map them to a player object inside a set.
                 current_sample = status.players.sample or []
@@ -143,11 +145,11 @@ def main():
                 left_now = last_players_online - current_players
 
                 if joined_now or left_now:
-                    print(f"[{current_time.isoformat()}] Server IP: {server.address}\tPlayers Online: {status.players.online}")
+                    print(f"[{current_time_local.isoformat()}] Server IP: {server.address}\tPlayers Online: {status.players.online}")
                     print("Players:", [p.name for p in current_players])
 
                     #log player list and count to server_session:
-                    create_server_status(online_players, [{"player_name": p.name, "player_id": p.id} for p in current_players], current_time)
+                    create_server_status(online_players, [{"player_name": p.name, "player_id": p.id} for p in current_players], current_time_utc)
 
                 # create event for joined players
                 # save them locally in memory
@@ -155,9 +157,9 @@ def main():
 
                     if player.name not in player_map:
                         player_map[player.name] = player
-                        player.join_time = current_time
-                        print(f"[{current_time}] {player.name} joined.")
-                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time)
+                        player.join_time = current_time_utc
+                        print(f"[{current_time_local.isoformat()}] {player.name} joined.")
+                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
                             
 
                 #create leave event / session for each left players.
@@ -165,19 +167,19 @@ def main():
 
                     leaving_player = player_map.get(player.name)
                     if leaving_player == None:
-                        print(f"[{current_time.isoformat()}] [WARNING] player: {player.name} was not in the player_map")
+                        print(f"[{current_time_local.isoformat()}] [WARNING] player: {player.name} was not in the player_map")
                     else:
 
-                        leaving_player.left_time = current_time
+                        leaving_player.left_time = current_time_utc
 
-                        log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time)
-                        print(f"[{current_time.isoformat()}] {leaving_player.name} left the server.")
+                        log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time_utc)
+                        print(f"[{current_time_local.isoformat()}] {leaving_player.name} left the server.")
                         player_map.pop(player.name, None)
 
                 last_players_online = current_players.copy()
 
             except Exception as e:
-                print(f"[{datetime.now(timezone.utc).isoformat()}] Error: {e}")
+                print(f"[{datetime.now(ZoneInfo('America/New_York')).isoformat()}] Error: {e}")
             time.sleep(SLEEP_TIME)
 
     except KeyboardInterrupt:
