@@ -1,6 +1,8 @@
 from mcstatus import JavaServer
 import time
 import os
+import signal
+import sys
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from pymongo import MongoClient
@@ -121,11 +123,19 @@ def log_event(eventType, player_obj, timestamp):
 
     create_event(player_obj, eventType, timestamp)
 
+def handle_shutdown(player_map):
+    for player in player_map.values():
+            print(f"Logging leave event for {player.name} due to shutdown.")
+            log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
+    sys.exit(0)
+   
 def main():
     # set of Player instances
     last_players_online = set()
     player_map = {}
 
+    signal.signal(signal.SIGTERM, lambda signal, frame: handle_shutdown(player_map))
+    
     try:
         print(f"[{datetime.now(timezone.utc).astimezone().isoformat()}][Server Scanner] Scanning Minecraft Server on: {MC_SERVER_IP}")
         while True:
@@ -184,9 +194,7 @@ def main():
             time.sleep(SLEEP_TIME)
 
     except KeyboardInterrupt:
-        for player in player_map.values():
-            print(f"Logging leave event for {player.name} due to shutdown.")
-            log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
+        handle_shutdown(player_map)
 
 if __name__ == "__main__":
     main()
