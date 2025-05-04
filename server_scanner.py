@@ -134,7 +134,11 @@ def main():
     last_players_online = set()
     player_map = {}
 
-    signal.signal(signal.SIGTERM, lambda signal, frame: handle_shutdown(player_map))
+    def handler(signal, frame):
+        handle_shutdown(player_map)
+        
+
+    signal.signal(signal.SIGTERM, handler)
     
     try:
         print(f"[{datetime.now(timezone.utc).astimezone().isoformat()}][Server Scanner] Scanning Minecraft Server on: {MC_SERVER_IP}")
