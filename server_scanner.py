@@ -125,8 +125,8 @@ def log_event(eventType, player_obj, timestamp):
 
 def handle_shutdown(player_map):
     for player in player_map.values():
-            print(f"Logging leave event for {player.name} due to shutdown.")
-            log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
+        print(f"Logging leave event for {player.name} due to shutdown.")
+        log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
     sys.exit(0)
    
 def main():
