@@ -46,7 +46,7 @@ MONGO_STRING = os.getenv("MONGO_STRING")
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
-SLEEP_TIME = 60 * 5
+SLEEP_TIME = 60 * 1
 
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
