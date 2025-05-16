@@ -1,4 +1,5 @@
 from mcstatus import JavaServer
+from bson.codec_options import CodecOptions
 import time
 import os
 import signal
@@ -49,11 +50,71 @@ SLEEP_TIME = 60
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
 
+
 #global collections.
-player_sessions = db.get_collection("player_sessions")
-player_events = db.get_collection("player_events")
-server_status = db.get_collection("server_status")
-players = db.get_collection("Players")
+player_sessions = None
+player_events = None
+players = None
+server_status = None
+
+if "player_sessions" not in db.list_collection_names(): 
+    player_sessions = db.create_collection(
+        "player_sessions",
+        codec_options=CodecOptions(
+            tz_aware=True,
+            tzinfo=timezone.utc,
+        ),
+        timeseries={
+            "timeField": "join_timestamp",
+            "metaField": "session_info",
+            "granularity": "seconds"
+        }
+    )
+else:
+    player_sessions = db.get_collection("player_sessions")
+
+if "player_events" not in db.list_collection_names():
+    player_events = db.create_collection(
+        "player_events",
+        codec_options=CodecOptions(
+            tz_aware=True,
+            tzinfo=timezone.utc,
+        ),
+        timeseries={
+            "timeField": "timestamp",
+            "metaField": "event_info",
+            "granularity": "seconds"
+        },
+    )
+else:
+    player_events = db.get_collection("player_events")
+
+
+if "server_status" not in db.list_collection_names():
+    server_status = db.create_collection(
+        "server_status",
+        codec_options=CodecOptions(
+            tz_aware=True,
+            tzinfo=timezone.utc,
+        ),
+        timeseries={
+            "timeField": "timestamp",
+            "granularity": "seconds"
+        }
+    )
+else:
+    server_status = db.get_collection("server_status")
+
+if "Players" not in db.list_collection_names():
+    players = db.create_collection(
+        "Players",
+        codec_options=CodecOptions(
+            tz_aware=True,
+            tzinfo=timezone.utc,
+        ),
+    )
+else:
+    players = db.get_collection("Players")
 
 def create_session(player, join_timestamp, leave_timestamp):
     play_time_minutes = round(calculate_playtime(join_timestamp, leave_timestamp))
