@@ -16,7 +16,41 @@ This application leverages publicly accessible metadata provided by vanilla Mine
 ## How It Works
 
 Vanilla Minecraft servers allow basic pinging to reveal the number of players online and a sample list (typically up to 15) of their usernames. This script pings the server every minute, compares the current player list with the previous one, and detects join or leave events accordingly. It logs these events and calculates session durations for each player.
-
+```
+┌────────────────┐                                             
+│                │                                             
+│   Mongodb      │                                             
+│   Database     │                                             
+│                │                                             
+└──────────┬─────┘                                             
+     ▲     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+     │     │                                                   
+┌────┼─────▼──────┐            ┌────────────────┐              
+│                 │            │                │              
+│ Minecraft Server│◄───────────┼    Targeted    │              
+│ Scanner.        │            │    Server      │              
+│                 │            │                │              
+└─────────────────┘            └────────────────┘              
+ 1.)Scanner queries the target server for a sampled list       
+    of players, total players online, etc.                     
+                                                               
+ 2.)The Scanner transforms this information and keeps track    
+    of timestamps and a map of unique players with state       
+    information. Based on the current sample, previous sample, 
+    and map of unique players seen, this information gets      
+    seperated into player_events, player_sessions, players,    
+    and server_status.                                         
+                                                               
+ 3.)sorted information is then written to the specified mongodb
+    database for later review and data aggregations.           
+```
 ## Database Design
 
 Four main MongoDB collections store the gathered data:
