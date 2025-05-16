@@ -222,6 +222,18 @@ def main():
                     if player.name in player_map:
                         player_map[player.name].absence_count = 0
 
+                for name, player_object in list(player_map.items()):
+                    if player_object not in current_players:
+                        player_map[name].absence_count += 1
+
+                        if player_map[name].absence_count >= 5:
+                            player_map[name].left_time = current_time_utc
+
+                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, current_time_utc)
+                            print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
+                            player_map.pop(name, None)
+
+
                 # determine the recently joined players vs the players that left.
                 joined_now = current_players - last_players_online
                 left_now = last_players_online - current_players
@@ -242,25 +254,7 @@ def main():
                         player.join_time = current_time_utc
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)  
-
-                #create leave event / session for each left players.
-                for player in left_now:
-
-                    leaving_player = player_map.get(player.name)
-                    if leaving_player == None:
-                        print(f"[{current_time_local.isoformat()}][Server Scanner][WARNING] player: {player.name} was not in the player_map")
-                    else:
-                        if leaving_player.absence_count == 5:
-                            leaving_player.left_time = current_time_utc
-
-                            log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time_utc)
-                            print(f"[{current_time_local.isoformat()}][Server Scanner] {leaving_player.name} left the server.")
-                            player_map.pop(player.name, None)
-                        else:
-                            leaving_player.absence_count += 1
-
                 last_players_online = current_players.copy()
-
             except Exception as e:
                 print(f"[{datetime.now(ZoneInfo('America/New_York')).isoformat()}] Error: {e}")
             time.sleep(SLEEP_TIME)
