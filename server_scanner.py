@@ -15,6 +15,7 @@ class Player:
         self.id = uuid
         self.join_time = join_time
         self.left_time = left_time
+        self.absence_count = 0
     
     def __str__(self):
         return f"{self.name}:{self.id}:join_time {self.join_time}:left_time {self.left_time}:"
@@ -45,7 +46,7 @@ MONGO_STRING = os.getenv("MONGO_STRING")
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
-SLEEP_TIME = 60
+SLEEP_TIME = 60 * 5
 
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
@@ -216,6 +217,11 @@ def main():
                 online_players = status.players.online
                 current_players = {Player(p.name, p.id) for p in current_sample}
                 
+                # reset absence count for all players in the current_players list
+                for player in current_players:
+                    if player.name in player_map:
+                        player_map[player.name].absence_count = 0
+
                 # determine the recently joined players vs the players that left.
                 joined_now = current_players - last_players_online
                 left_now = last_players_online - current_players
@@ -235,8 +241,7 @@ def main():
                         player_map[player.name] = player
                         player.join_time = current_time_utc
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
-                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
-                            
+                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)  
 
                 #create leave event / session for each left players.
                 for player in left_now:
@@ -245,12 +250,14 @@ def main():
                     if leaving_player == None:
                         print(f"[{current_time_local.isoformat()}][Server Scanner][WARNING] player: {player.name} was not in the player_map")
                     else:
+                        if leaving_player.absence_count == 5:
+                            leaving_player.left_time = current_time_utc
 
-                        leaving_player.left_time = current_time_utc
-
-                        log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time_utc)
-                        print(f"[{current_time_local.isoformat()}][Server Scanner] {leaving_player.name} left the server.")
-                        player_map.pop(player.name, None)
+                            log_event(EVENT_TYPE["PLAYER_LEAVE"], leaving_player, current_time_utc)
+                            print(f"[{current_time_local.isoformat()}][Server Scanner] {leaving_player.name} left the server.")
+                            player_map.pop(player.name, None)
+                        else:
+                            leaving_player.absence_count += 1
 
                 last_players_online = current_players.copy()
 
