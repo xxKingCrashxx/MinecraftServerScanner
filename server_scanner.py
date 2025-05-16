@@ -222,17 +222,7 @@ def main():
                     if player.name in player_map:
                         player_map[player.name].absence_count = 0
 
-                for name, player_object in list(player_map.items()):
-                    if player_object not in current_players:
-                        player_map[name].absence_count += 1
-
-                        if player_map[name].absence_count >= 5:
-                            player_map[name].left_time = current_time_utc
-
-                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, current_time_utc)
-                            print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
-                            player_map.pop(name, None)
-
+                
 
                 # determine the recently joined players vs the players that left.
                 joined_now = current_players - last_players_online
@@ -253,7 +243,19 @@ def main():
                         player_map[player.name] = player
                         player.join_time = current_time_utc
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
-                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)  
+                        log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
+
+                for name, player_object in list(player_map.items()):
+                    if player_object not in current_players:
+                        player_map[name].absence_count += 1
+
+                        if player_map[name].absence_count >= 5:
+                            player_map[name].left_time = current_time_utc
+
+                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, current_time_utc)
+                            print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
+                            player_map.pop(name, None)
+  
                 last_players_online = current_players.copy()
             except Exception as e:
                 print(f"[{datetime.now(ZoneInfo('America/New_York')).isoformat()}] Error: {e}")
