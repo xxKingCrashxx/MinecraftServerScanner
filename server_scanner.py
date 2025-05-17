@@ -1,20 +1,22 @@
-from mcstatus import JavaServer
-from bson.codec_options import CodecOptions
+
 import time
 import os
 import signal
 import sys
+import math
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from pymongo import MongoClient
 from zoneinfo import ZoneInfo
+from mcstatus import JavaServer
+from bson.codec_options import CodecOptions
 
 class Player:
     def __init__(self, name, uuid, join_time=None, left_time=None):
         self.name = name
         self.id = uuid
         self.join_time = join_time
-        self.left_time = left_time
+        self.last_seen = join_time
         self.absence_count = 0
     
     def __str__(self):
@@ -47,6 +49,7 @@ MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
 SLEEP_TIME = 60 * 1
+BASE_ABSENCE_THRESHOLD = 5
 
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
@@ -190,7 +193,19 @@ def handle_shutdown(player_map):
         print(f"Logging leave event for {player.name} due to shutdown.")
         log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
     sys.exit(0)
-   
+
+def calculate_sampling_ratio(sampled_list_count: int, total_player_count: int):
+    return (sampled_list_count / total_player_count if total_player_count > 0 else 0)
+
+
+def calculate_absence_threshold(sample_size, total_online, base_threshold=5, min_threshold=2, max_threshold=12):
+    if total_online == 0 or sample_size == 0:
+        return min_threshold
+    
+    ratio = calculate_sampling_ratio(sample_size, total_online)
+    adjusted = base_threshold + math.ceil(math.log10(1 / ratio))
+    return max(min(adjusted, max_threshold), min_threshold)
+
 def main():
     # set of Player instances
     last_players_online = set()
@@ -221,6 +236,7 @@ def main():
                 for player in current_players:
                     if player.name in player_map:
                         player_map[player.name].absence_count = 0
+                        player_map[player.name].last_seen = current_time_utc
 
                 
 
@@ -239,19 +255,21 @@ def main():
                     if player.name not in player_map:
                         player_map[player.name] = player
                         player.join_time = current_time_utc
+                        player.last_seen = current_time_utc
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
 
                 #mark existing players for potential pruning & prune after
                 #the absence count reaches a given threshhold.
+                absence_threshold = calculate_absence_threshold(len(current_players), online_players, base_threshold=BASE_ABSENCE_THRESHOLD)
                 for name, player_object in list(player_map.items()):
                     if player_object not in current_players:
                         player_map[name].absence_count += 1
 
-                        if player_map[name].absence_count >= 5:
+                        if player_map[name].absence_count >= absence_threshold:
                             player_map[name].left_time = current_time_utc
 
-                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, current_time_utc)
+                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, player_object.last_seen)
                             print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
                             player_map.pop(name, None)
 
@@ -262,7 +280,7 @@ def main():
                         [
                             {"player_name": p.name, "player_id": p.id} 
                             for p in player_map.values()
-                            if p.absence_count < 5
+                            if p.absence_count < absence_threshold
                         ], 
                         current_time_utc
                     )
