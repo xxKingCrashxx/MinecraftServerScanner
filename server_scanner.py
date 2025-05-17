@@ -230,10 +230,7 @@ def main():
 
                 if joined_now or left_now:
                     print(f"[{current_time_local.isoformat()}][Server Scanner] Server IP: {server.address}\tPlayers Online: {status.players.online}")
-                    print("Players:", [p.name for p in current_players])
-
-                    #log player list and count to server_session:
-                    create_server_status(online_players, [{"player_name": p.name, "player_id": p.id} for p in current_players], current_time_utc)
+        
 
                 # create event for joined players
                 # save them locally in memory
@@ -245,6 +242,8 @@ def main():
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
 
+                #mark existing players for potential pruning & prune after
+                #the absence count reaches a given threshhold.
                 for name, player_object in list(player_map.items()):
                     if player_object not in current_players:
                         player_map[name].absence_count += 1
@@ -255,7 +254,19 @@ def main():
                             log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, current_time_utc)
                             print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
                             player_map.pop(name, None)
-  
+
+                if joined_now or left_now:
+                     #log player list and count to server_session:
+                    create_server_status(
+                        online_players, 
+                        [
+                            {"player_name": p.name, "player_id": p.id} 
+                            for p in player_map.values()
+                            if p.absence_count < 5
+                        ], 
+                        current_time_utc
+                    )
+                
                 last_players_online = current_players.copy()
             except Exception as e:
                 print(f"[{datetime.now(ZoneInfo('America/New_York')).isoformat()}] Error: {e}")
