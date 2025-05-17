@@ -48,8 +48,10 @@ MONGO_STRING = os.getenv("MONGO_STRING")
 MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
-SLEEP_TIME = 60 * 1
-BASE_ABSENCE_THRESHOLD = 5
+SLEEP_TIME = 30
+BASE_ABSENCE_THRESHOLD = 30
+MIN_ABSENCE_THRESHOLD = 20
+MAX_ABSENCE_THRESHOLD = 40
 
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
@@ -198,7 +200,7 @@ def calculate_sampling_ratio(sampled_list_count: int, total_player_count: int):
     return (sampled_list_count / total_player_count if total_player_count > 0 else 0)
 
 
-def calculate_absence_threshold(sample_size, total_online, base_threshold=5, min_threshold=2, max_threshold=12):
+def calculate_absence_threshold(sample_size, total_online, base_threshold=BASE_ABSENCE_THRESHOLD, min_threshold=MIN_ABSENCE_THRESHOLD, max_threshold=MAX_ABSENCE_THRESHOLD):
     if total_online == 0 or sample_size == 0:
         return min_threshold
     
