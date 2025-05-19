@@ -49,7 +49,7 @@ DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
 BASE_SLEEP_TIME = 30
 MIN_SLEEP_TIME = 10
-MAX_SLEEP_TIME = 60
+MAX_SLEEP_TIME = 90
 BASE_ABSENCE_THRESHOLD = 600
 MIN_ABSENCE_THRESHOLD = 300
 MAX_ABSENCE_THRESHOLD = 900
@@ -233,7 +233,7 @@ def calculate_dynamic_sleep_time(
     if ratio <= 0:
         return max_sleep
     
-    adjusted_sleep_time = round(base_sleep * (1 / ratio))
+    adjusted_sleep_time = round(base_sleep * ratio)
     return max(min(adjusted_sleep_time, max_sleep), min_sleep)
 
 
