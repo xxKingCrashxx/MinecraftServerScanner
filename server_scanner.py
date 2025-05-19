@@ -50,9 +50,9 @@ DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 BASE_SLEEP_TIME = 30
 MIN_SLEEP_TIME = 10
 MAX_SLEEP_TIME = 90
-BASE_ABSENCE_THRESHOLD = 600
-MIN_ABSENCE_THRESHOLD = 300
-MAX_ABSENCE_THRESHOLD = 900
+BASE_ABSENCE_THRESHOLD = 120
+MIN_ABSENCE_THRESHOLD = 60
+MAX_ABSENCE_THRESHOLD = 600
 
 client = MongoClient(MONGO_STRING)
 db = client[DB_NAME]
@@ -194,7 +194,7 @@ def log_event(eventType, player_obj, timestamp):
 def handle_shutdown(player_map):
     for player in player_map.values():
         print(f"Logging leave event for {player.name} due to shutdown.")
-        log_event(EVENT_TYPE["PLAYER_LEAVE"], player, datetime.now(tz=timezone.utc))
+        log_event(EVENT_TYPE["PLAYER_LEAVE"], player, player.last_seen )
     sys.exit(0)
 
 def calculate_sampling_ratio(sampled_list_count: int, total_player_count: int):
