@@ -243,8 +243,7 @@ def calculate_dynamic_sleep_time(
 
 def calculate_confidence_score(absence_time, absence_time_threshold, sampling_ratio):
     confidence_time = max(1.0 - (absence_time / absence_time_threshold), 0.0)
-    confidence_sampling = sampling_ratio if sampling_ratio <= 1.0 else 1.0
-    return confidence_time * confidence_sampling
+    return confidence_time
 
 def main():
     # set of Player instances
