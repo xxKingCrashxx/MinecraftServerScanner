@@ -125,6 +125,10 @@ else:
 
 def create_session(player, join_timestamp, leave_timestamp):
     play_time_minutes = round(calculate_playtime(join_timestamp, leave_timestamp))
+
+    if play_time_minutes == 0:
+        return
+    
     player_sessions.insert_one({
         "session_info": {
             "player_id": player.id,
