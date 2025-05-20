@@ -17,6 +17,7 @@ class Player:
         self.id = uuid
         self.join_time = join_time
         self.last_seen = join_time
+        self.confidence_score = 1.0
     
     def __str__(self):
         return f"{self.name}:{self.id}:join_time {self.join_time}:left_time {self.left_time}:"
@@ -240,6 +241,10 @@ def calculate_dynamic_sleep_time(
     adjusted_sleep_time = round(base_sleep * ratio)
     return max(min(adjusted_sleep_time, max_sleep), min_sleep)
 
+def calculate_confidence_score(absence_time, absence_time_threshold, sampling_ratio):
+    confidence_time = max(1.0 - (absence_time / absence_time_threshold), 0.0)
+    confidence_sampling = sampling_ratio if sampling_ratio <= 1.0 else 1.0
+    return confidence_time * confidence_sampling
 
 def main():
     # set of Player instances
@@ -277,8 +282,8 @@ def main():
                 for player in current_players:
                     if player.name in player_map:
                         player_map[player.name].last_seen = current_time_utc
+                        player_map[player.name].confidence_score = 1
 
-                
 
                 # determine the recently joined players vs the players that left.
                 joined_now = current_players - last_players_online
@@ -306,6 +311,15 @@ def main():
                     if player_object not in current_players:
                         absence_duration = (current_time_utc - player_object.last_seen).total_seconds()
 
+                        player_object.confidence_score = calculate_confidence_score(
+                            absence_duration, 
+                            absence_time_threshold, 
+                            calculate_sampling_ratio(
+                                len(current_players),
+                                online_players
+                            )
+                        )
+
                         if absence_duration >= absence_time_threshold:
 
                             log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, player_object.last_seen)
@@ -317,7 +331,7 @@ def main():
                     create_server_status(
                         online_players, 
                         [
-                            {"player_name": p.name, "player_id": p.id} 
+                            {"player_name": p.name, "player_id": p.id, "confidence_score_online": p.confidence_score} 
                             for p in player_map.values()
                         ], 
                         current_time_utc
