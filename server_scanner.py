@@ -208,7 +208,8 @@ def calculate_sampling_ratio(sampled_list_count: int, total_player_count: int):
 
 def calculate_absence_time_threshold(
         sample_size, 
-        total_online, 
+        total_online,
+        sleep_time, 
         base_threshold=BASE_ABSENCE_THRESHOLD, 
         min_threshold=MIN_ABSENCE_THRESHOLD, 
         max_threshold=MAX_ABSENCE_THRESHOLD
@@ -217,7 +218,10 @@ def calculate_absence_time_threshold(
         return max_threshold
     
     ratio = calculate_sampling_ratio(sample_size, total_online)
-    adjusted = base_threshold + math.ceil(math.log10(1 / ratio)) * 60
+    server_weight = math.log1p(total_online)
+    visibility_qty = (1/ratio) ** 0.5
+    adjusted = base_threshold * visibility_qty * (sleep_time / BASE_SLEEP_TIME) * (server_weight / math.log1p(sample_size))
+    
     return max(min(adjusted, max_threshold), min_threshold)
 
 def calculate_dynamic_sleep_time(
@@ -301,7 +305,11 @@ def main():
 
                 #mark existing players for potential pruning & prune after
                 #the absence time reaches a given threshhold.
-                absence_time_threshold = calculate_absence_time_threshold(len(current_players), online_players, base_threshold=BASE_ABSENCE_THRESHOLD)
+                absence_time_threshold = calculate_absence_time_threshold(
+                    len(current_players), 
+                    online_players, 
+                    dynamic_sleep_time,
+                )
                 for name, player_object in list(player_map.items()):
                     if player_object not in current_players:
                         absence_duration = (current_time_utc - player_object.last_seen).total_seconds()
