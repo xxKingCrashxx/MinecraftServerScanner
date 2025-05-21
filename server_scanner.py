@@ -51,7 +51,7 @@ DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 BASE_SLEEP_TIME = 30
 MIN_SLEEP_TIME = 10
 MAX_SLEEP_TIME = 60
-BASE_ABSENCE_THRESHOLD = 300
+BASE_ABSENCE_THRESHOLD = 225
 MIN_ABSENCE_THRESHOLD = 90
 MAX_ABSENCE_THRESHOLD = 700
 
@@ -217,12 +217,13 @@ def calculate_absence_time_threshold(
     if total_online == 0 or sample_size == 0:
         return max_threshold
     
-    ratio = calculate_sampling_ratio(sample_size, total_online)
-    server_weight = math.log1p(total_online)
-    visibility_qty = (1/ratio) ** 0.5
-    adjusted = base_threshold * visibility_qty * (sleep_time / BASE_SLEEP_TIME) * (server_weight / math.log1p(sample_size))
+    sampling_ratio = calculate_sampling_ratio(sample_size, total_online)
+    visibility_scale = 1 / sampling_ratio
+    server_size_scale = math.log1p(total_online) / math.log1p(12)
+    adjusted_threshold = base_threshold * (BASE_SLEEP_TIME/sleep_time) * (visibility_scale ** 0.425) * server_size_scale ** 0.3
+
+    return max(min(adjusted_threshold, max_threshold), min_threshold)
     
-    return max(min(adjusted, max_threshold), min_threshold)
 
 def calculate_dynamic_sleep_time(
     sample_size: int,
@@ -234,12 +235,12 @@ def calculate_dynamic_sleep_time(
     if total_online == 0 or sample_size == 0:
         return max_sleep
     
-    ratio = calculate_sampling_ratio(sample_size, total_online)
-    ratio_decay = ratio ** 0.9
-    server_scale = 1 + (1 / math.log1p(total_online))
-    
-    adjusted_sleep_time = round(base_sleep * ratio_decay * server_scale)
-    return max(min(adjusted_sleep_time, max_sleep), min_sleep)
+    sampling_ratio = calculate_sampling_ratio(sample_size, total_online)
+    visibility_scale = 1 / sampling_ratio
+    adjusted_sleep = math.ceil(base_sleep * (visibility_scale ** 0.8))
+
+    return max(min(adjusted_sleep, max_sleep), min_sleep)
+     
 
 def calculate_confidence_score(absence_time, absence_time_threshold, sampling_ratio):
     confidence_time = max(1.0 - (absence_time / absence_time_threshold), 0.0)
@@ -268,7 +269,7 @@ def main():
 
                 # get sampled list of players currently online then map them to a player object inside a set.
                 current_sample = status.players.sample or []
-                online_players = status.players.online
+                online_players = status.players.online or 0
                 current_players = {Player(p.name, p.id) for p in current_sample}
 
                 # calculate sleep time based on the sampling ratio
@@ -276,13 +277,6 @@ def main():
                     len(current_players),
                     online_players,
                 )
-
-                # reset absence for all players in the current_players list
-                for player in current_players:
-                    if player.name in player_map:
-                        player_map[player.name].last_seen = current_time_utc
-                        player_map[player.name].confidence_score = 1
-
 
                 # determine the recently joined players vs the players that left.
                 joined_now = current_players - last_players_online
@@ -302,6 +296,7 @@ def main():
                         player.last_seen = current_time_utc
                         print(f"[{current_time_local.isoformat()}][Server Scanner] {player.name} joined.")
                         log_event(EVENT_TYPE["PLAYER_JOIN"], player, current_time_utc)
+                    
 
                 #mark existing players for potential pruning & prune after
                 #the absence time reaches a given threshhold.
@@ -310,11 +305,15 @@ def main():
                     online_players, 
                     dynamic_sleep_time,
                 )
-                for name, player_object in list(player_map.items()):
-                    if player_object not in current_players:
-                        absence_duration = (current_time_utc - player_object.last_seen).total_seconds()
 
-                        player_object.confidence_score = calculate_confidence_score(
+                for name, player in list(player_map.items()):
+
+                    if player in current_players:
+                        player.last_seen = current_time_utc
+                        player.confidence_score = 1
+                    else:
+                        absence_duration = (current_time_utc - player.last_seen).total_seconds()
+                        player.confidence_score = calculate_confidence_score(
                             absence_duration, 
                             absence_time_threshold, 
                             calculate_sampling_ratio(
@@ -322,10 +321,9 @@ def main():
                                 online_players
                             )
                         )
-
                         if absence_duration >= absence_time_threshold:
 
-                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player_object, player_object.last_seen)
+                            log_event(EVENT_TYPE["PLAYER_LEAVE"], player, player.last_seen)
                             print(f"[{current_time_local.isoformat()}][Server Scanner] {name} left the server.")
                             player_map.pop(name, None)
 
