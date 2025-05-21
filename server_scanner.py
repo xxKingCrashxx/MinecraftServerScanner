@@ -231,14 +231,10 @@ def calculate_dynamic_sleep_time(
         return max_sleep
     
     ratio = calculate_sampling_ratio(sample_size, total_online)
-
-    if ratio >= 1.0:
-        return base_sleep
+    ratio_decay = ratio ** 0.5
+    server_scale = 1 / math.log1p(total_online)
     
-    if ratio <= 0:
-        return max_sleep
-    
-    adjusted_sleep_time = round(base_sleep * ratio)
+    adjusted_sleep_time = round(base_sleep * ratio_decay * server_scale)
     return max(min(adjusted_sleep_time, max_sleep), min_sleep)
 
 def calculate_confidence_score(absence_time, absence_time_threshold, sampling_ratio):
