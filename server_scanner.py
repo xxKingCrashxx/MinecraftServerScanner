@@ -237,7 +237,7 @@ def calculate_dynamic_sleep_time(
     
     sampling_ratio = calculate_sampling_ratio(sample_size, total_online)
     visibility_scale = 1 / sampling_ratio
-    adjusted_sleep = math.ceil(base_sleep * (visibility_scale ** 0.8))
+    adjusted_sleep = math.ceil(base_sleep / (visibility_scale ** 0.8))
 
     return max(min(adjusted_sleep, max_sleep), min_sleep)
      
