@@ -235,8 +235,8 @@ def calculate_dynamic_sleep_time(
         return max_sleep
     
     ratio = calculate_sampling_ratio(sample_size, total_online)
-    ratio_decay = ratio ** 0.5
-    server_scale = 1 / math.log1p(total_online)
+    ratio_decay = ratio ** 0.9
+    server_scale = 1 + (1 / math.log1p(total_online))
     
     adjusted_sleep_time = round(base_sleep * ratio_decay * server_scale)
     return max(min(adjusted_sleep_time, max_sleep), min_sleep)
