@@ -49,7 +49,7 @@ MC_SERVER_IP = os.getenv("MC_SERVER_IP")
 DB_NAME = os.getenv("MONGO_DATABASE_NAME")
 
 BASE_SLEEP_TIME = 30
-MIN_SLEEP_TIME = 10
+MIN_SLEEP_TIME = 5
 MAX_SLEEP_TIME = 60
 BASE_ABSENCE_THRESHOLD = 225
 MIN_ABSENCE_THRESHOLD = 90
@@ -209,7 +209,6 @@ def calculate_sampling_ratio(sampled_list_count: int, total_player_count: int):
 def calculate_absence_time_threshold(
         sample_size, 
         total_online,
-        sleep_time, 
         base_threshold=BASE_ABSENCE_THRESHOLD, 
         min_threshold=MIN_ABSENCE_THRESHOLD, 
         max_threshold=MAX_ABSENCE_THRESHOLD
@@ -220,7 +219,7 @@ def calculate_absence_time_threshold(
     sampling_ratio = calculate_sampling_ratio(sample_size, total_online)
     visibility_scale = 1 / sampling_ratio
     server_size_scale = math.log1p(total_online) / math.log1p(12)
-    adjusted_threshold = base_threshold * (BASE_SLEEP_TIME/sleep_time) * (visibility_scale ** 0.425) * server_size_scale ** 0.3
+    adjusted_threshold = base_threshold * (visibility_scale ** 0.425) * server_size_scale ** 0.100
 
     return max(min(adjusted_threshold, max_threshold), min_threshold)
     
@@ -303,7 +302,6 @@ def main():
                 absence_time_threshold = calculate_absence_time_threshold(
                     len(current_players), 
                     online_players, 
-                    dynamic_sleep_time,
                 )
 
                 for name, player in list(player_map.items()):
